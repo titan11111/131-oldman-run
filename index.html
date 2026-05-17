@@ -795,6 +795,10 @@ let whisperCooldown = 0;
 let isGenerating = false;
 let cameraX = 0;
 let transitionAlpha = 0;
+let screenShake = 0;         // スクリーンシェイク強度
+let skyGradCache1 = null;    // ステージ1 星空グラデキャッシュ
+let skyGradCache3 = null;    // ステージ3 夕空グラデキャッシュ
+let skyGradCache2Main = null; // ステージ2 昼空グラデキャッシュ
 let bossEnemy = null;
 let obstacles = [];
 let bossStageObstacles = [];
@@ -1095,15 +1099,18 @@ function showWhisper(text) {
 
 // ============ パーティクル ============
 function spawnParticles(x, y, color, count) {
-  for(let i=0;i<count;i++){
+  const free = 100 - particles.length;
+  if(free <= 0) return;
+  const n = Math.min(count, free);
+  for(let i=0;i<n;i++){
     particles.push({
       x, y,
-      vx: (Math.random()-0.5)*4,
-      vy: (Math.random()-2)*3,
-      life: 30 + Math.random()*20,
+      vx: (Math.random()-0.5)*7,
+      vy: (Math.random()-2)*5,
+      life: 28 + Math.random()*22,
       maxLife: 50,
       color,
-      size: 2 + Math.random()*3
+      size: 3 + Math.random()*4
     });
   }
 }
@@ -1216,7 +1223,7 @@ function update(dt) {
   if((keys['z']||keys['Z']) && attackCooldown === 0) {
     player.attacking = true;
     player.atkTimer = 18;
-    attackCooldown = 30;
+    attackCooldown = 18;
     // パワーアップ遅延タイマー登録
     if(playerPowerUps.includes('wave')) {
       powerupTimers.push({type:'wave', delay:60, x:player.x, y:player.y, dir:player.dir});
@@ -1233,11 +1240,15 @@ function update(dt) {
       const dy = Math.abs(e.y + 4*SCALE - atkY);
       if(dx < 13*SCALE && dy < 9*SCALE) {
         e.hp--;
-        spawnParticles(e.x+4*SCALE, e.y+4*SCALE, '#c84a2a', 8);
+        e.vx += player.dir * 5;  // ノックバック
+        screenShake = 5;
+        spawnParticles(e.x+4*SCALE, e.y+4*SCALE, '#c84a2a', 16);
         hit = true;
         if(e.hp <= 0) {
           addScore(10);
-          spawnParticles(e.x+4*SCALE, e.y+4*SCALE, '#d4c89a', 12);
+          screenShake = 9;
+          spawnParticles(e.x+4*SCALE, e.y+4*SCALE, '#d4c89a', 26);
+          spawnParticles(e.x+4*SCALE, e.y+4*SCALE, '#ff6a4a', 12);
           if(whisperCooldown === 0) generateWhisper('謎の存在を杖で倒した直後');
           return false;
         }
@@ -1292,7 +1303,7 @@ function update(dt) {
   // 歩きアニメ
   if(player.vx !== 0) {
     player.walkTimer++;
-    if(player.walkTimer > 10) { player.walkFrame = 1-player.walkFrame; player.walkTimer=0; }
+    if(player.walkTimer > 6) { player.walkFrame = 1-player.walkFrame; player.walkTimer=0; }
   }
 
   // --- 敵更新 ---
@@ -1382,13 +1393,16 @@ function update(dt) {
     if(player.vy > 0 && hOv && prevBottom <= e.y + 6 && playerBottom >= e.y) {
       e.hp--;
       e.hit = 20;
-      player.vy = -7;          // 踏んだ反動でバウンド
+      player.vy = -8;          // 踏んだ反動でバウンド（強め）
       player.onGround = false;
-      spawnParticles(e.x + ew/2, e.y, '#ffdd44', 8);
+      screenShake = 7;
+      spawnParticles(e.x + ew/2, e.y, '#ffdd44', 18);
       if(e.hp <= 0) {
         score += 15;
         updateScore();
-        spawnParticles(e.x + ew/2, e.y, '#d4c89a', 14);
+        screenShake = 10;
+        spawnParticles(e.x + ew/2, e.y, '#d4c89a', 28);
+        spawnParticles(e.x + ew/2, e.y, '#ffdd44', 14);
         if(whisperCooldown === 0) generateWhisper('踏みつけで倒した直後');
         stompKilled.add(e);
       }
@@ -1402,7 +1416,8 @@ function update(dt) {
       if(dx < (pw+ew)/2 - 4 && dy < (ph+ew)/2 - 4) {
         player.hp--;
         player.invincible = 90;
-        spawnParticles(player.x+5*SCALE, player.y+5*SCALE, '#ff6a4a', 10);
+        screenShake = 13;
+        spawnParticles(player.x+5*SCALE, player.y+5*SCALE, '#ff6a4a', 22);
         updateHP();
         if(player.hp <= 0) { gameOver(); return; }
         if(whisperCooldown === 0) generateWhisper('謎の存在にやられた直後');
@@ -1557,7 +1572,7 @@ function updateBoss(dt) {
   if((keys['z']||keys['Z']) && attackCooldown === 0) {
     player.attacking = true;
     player.atkTimer = 18;
-    attackCooldown = 30;
+    attackCooldown = 18;
     if(bossEnemy && bossEnemy.hp > 0) {
       const atkX = player.x + (player.dir > 0 ? 20*SCALE : -8*SCALE);
       const atkY = player.y + 1*SCALE;
@@ -1610,7 +1625,7 @@ function updateBoss(dt) {
   }
   if(player.vx !== 0) {
     player.walkTimer++;
-    if(player.walkTimer > 10) { player.walkFrame = 1-player.walkFrame; player.walkTimer=0; }
+    if(player.walkTimer > 6) { player.walkFrame = 1-player.walkFrame; player.walkTimer=0; }
   }
 
   // ボスAI
@@ -2038,12 +2053,14 @@ function hashVal(n) { return ((n * 1664525 + 1013904223) & 0x7fffffff) / 0x7ffff
 
 function drawBackground() {
   // ─── 最背景：pixel starry night ───
-  // 空グラデーション（オフスクリーン）
-  const skyGrad = starCtx.createLinearGradient(0,0,0,SKY_H);
-  skyGrad.addColorStop(0,'rgb(8,12,48)');
-  skyGrad.addColorStop(0.55,'rgb(18,28,80)');
-  skyGrad.addColorStop(1,'rgb(25,45,110)');
-  starCtx.fillStyle = skyGrad;
+  // 空グラデーション（キャッシュ化：初回のみ生成）
+  if(!skyGradCache1) {
+    skyGradCache1 = starCtx.createLinearGradient(0,0,0,SKY_H);
+    skyGradCache1.addColorStop(0,'rgb(8,12,48)');
+    skyGradCache1.addColorStop(0.55,'rgb(18,28,80)');
+    skyGradCache1.addColorStop(1,'rgb(25,45,110)');
+  }
+  starCtx.fillStyle = skyGradCache1;
   starCtx.fillRect(0,0,SKY_W,SKY_H);
 
   // 星描画（3レイヤー視差）
@@ -2159,12 +2176,14 @@ function drawBackground() {
 
 // ============ 2面背景：昼の商店街 ============
 function drawBackgroundStage2() {
-  // 青空グラデーション
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND);
-  skyGrad.addColorStop(0, 'rgb(72,144,216)');
-  skyGrad.addColorStop(0.6, 'rgb(120,188,240)');
-  skyGrad.addColorStop(1, 'rgb(160,210,248)');
-  ctx.fillStyle = skyGrad;
+  // 青空グラデーション（キャッシュ化）
+  if(!skyGradCache2Main) {
+    skyGradCache2Main = ctx.createLinearGradient(0, 0, 0, GROUND);
+    skyGradCache2Main.addColorStop(0, 'rgb(72,144,216)');
+    skyGradCache2Main.addColorStop(0.6, 'rgb(120,188,240)');
+    skyGradCache2Main.addColorStop(1, 'rgb(160,210,248)');
+  }
+  ctx.fillStyle = skyGradCache2Main;
   ctx.fillRect(0, 0, W, GROUND);
 
   // 太陽
@@ -2241,12 +2260,14 @@ function drawBackgroundStage2() {
 
 // ============ 3面背景：朝の住宅街 ============
 function drawBackgroundStage3() {
-  // 最背面：朝焼けグラデーション（明るさ・色味を変更）
-  const skyGrad = starCtx.createLinearGradient(0, 0, 0, SKY_H);
-  skyGrad.addColorStop(0, 'rgb(255,205,160)');
-  skyGrad.addColorStop(0.42, 'rgb(255,225,190)');
-  skyGrad.addColorStop(1, 'rgb(196,230,255)');
-  starCtx.fillStyle = skyGrad;
+  // 最背面：朝焼けグラデーション（キャッシュ化）
+  if(!skyGradCache3) {
+    skyGradCache3 = starCtx.createLinearGradient(0, 0, 0, SKY_H);
+    skyGradCache3.addColorStop(0, 'rgb(255,205,160)');
+    skyGradCache3.addColorStop(0.42, 'rgb(255,225,190)');
+    skyGradCache3.addColorStop(1, 'rgb(196,230,255)');
+  }
+  starCtx.fillStyle = skyGradCache3;
   starCtx.fillRect(0, 0, SKY_W, SKY_H);
 
   // 地平線の光芒（最背面の雰囲気差分）
@@ -2408,6 +2429,15 @@ function drawObstacles() {
 // ============ 描画 ============
 function draw() {
   ctx.clearRect(0,0,W,H);
+  // スクリーンシェイク
+  if(screenShake > 0.5) {
+    ctx.save();
+    ctx.translate(
+      (Math.random()-0.5)*screenShake*2,
+      (Math.random()-0.5)*screenShake*2
+    );
+    screenShake *= 0.72;
+  }
 
   // ボスステージ・クリアは専用描画
   if(state === 'boss' || state === 'clear') {
@@ -2618,6 +2648,10 @@ function draw() {
     ctx.fillStyle = `rgba(0,0,0,${transitionAlpha})`;
     ctx.fillRect(0,0,W,H);
   }
+
+  // スクリーンシェイク終了
+  if(screenShake > 0.5) ctx.restore();
+  else screenShake = 0;
 }
 
 // ============ 入力 ============
