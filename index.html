@@ -7,8 +7,8 @@
 <style>
 :root {
   --play-extend: 3cm;
-  --control-size: clamp(56px, 15vw, 68px);
-  --dpad-size: clamp(98px, 25vw, 116px); /* 既存比およそ1.2倍 */
+  --control-size: clamp(84px, 22vw, 102px);   /* 1.5倍: 56→84, 68→102 */
+  --dpad-size: clamp(147px, 37vw, 174px);      /* 1.5倍: 98→147, 116→174 */
 }
 * {
   margin:0;
@@ -54,7 +54,7 @@ body {
   width:min(480px, calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 20px));
   height:100%;
   max-height:100%;
-  padding-bottom:156px; /* 固定コントロールぶんの退避領域 */
+  padding-bottom:224px; /* 固定コントロールぶんの退避領域（1.5倍ボタン対応） */
   overflow:hidden;
 }
 #ui {
@@ -91,11 +91,12 @@ body {
   background:#0a0a0c;
   width:100%;
   height:auto;
-  max-height:min(calc(56dvh + var(--play-extend)), calc(100dvh - 208px));
+  max-height:min(calc(48dvh + var(--play-extend)), calc(100dvh - 276px));
 }
 #playField {
   position:relative;
   width:100%;
+  margin-top:1cm;
 }
 /* 呟きエリア */
 #whisperArea {
@@ -160,8 +161,8 @@ body {
 .dpad-center {
   grid-column:2;
   grid-row:2;
-  width:36px;
-  height:36px;
+  width:54px;
+  height:54px;
   border-radius:8px;
   background:linear-gradient(150deg, #1c1c24, #0e0e14);
   border:1px solid #2a2a34;
@@ -276,21 +277,25 @@ body {
 #overlayBtn.show { opacity:1; }
 #overlayBtn:hover { background:#c84a2a; color:#000; }
 
-/* iPhone SE など高さが低い端末向け */
+/* iPhone SE など高さが低い端末（760px以下）: 1.2倍に抑えて画面を確保 */
 @media (max-height: 760px) {
-  #gameWrapper { padding-bottom: 132px; }
-  #canvas { max-height: min(calc(50dvh + var(--play-extend)), calc(100dvh - 180px)); }
+  :root {
+    --control-size: clamp(68px, 18vw, 82px);
+    --dpad-size: clamp(118px, 30vw, 140px);
+  }
+  #gameWrapper { padding-bottom: 186px; }
+  #canvas { max-height: min(calc(44dvh + var(--play-extend)), calc(100dvh - 238px)); }
   #whisperArea { min-height: 34px; padding: 5px 10px; }
   #controls { bottom: max(14px, env(safe-area-inset-bottom)); }
 }
 
-/* 縦長端末向け（iPhone 14/15系） */
+/* 縦長端末（iPhone 14/15系 850px以上）: 余白があるので1.5倍フル適用 */
 @media (min-height: 850px) {
-  #gameWrapper { padding-bottom: 164px; }
-  #canvas { max-height: min(calc(60dvh + var(--play-extend)), calc(100dvh - 212px)); }
+  #gameWrapper { padding-bottom: 232px; }
+  #canvas { max-height: min(calc(52dvh + var(--play-extend)), calc(100dvh - 284px)); }
 }
 
-/* 幅が狭いiPhone向け（SE/mini系） */
+/* 幅が狭いiPhone（SE/mini 390px以下） */
 @media (max-width: 390px) {
   #ui { padding:5px 8px; }
   #scoreDisplay { font-size:10px; letter-spacing:1px; }
@@ -301,16 +306,16 @@ body {
     width:calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 16px);
   }
   .actionButtons { gap:10px; }
-  .roundBtn {
-    width:var(--control-size);
-    height:var(--control-size);
-  }
 }
 
-/* 極端に高さが低い場合はさらに圧縮して必ず収める */
+/* 極端に高さが低い場合（700px以下）: 1.0倍（元サイズ）で圧縮 */
 @media (max-height: 700px) {
-  #gameWrapper { padding-bottom: 124px; }
-  #canvas { max-height: min(calc(46dvh + var(--play-extend)), calc(100dvh - 170px)); }
+  :root {
+    --control-size: clamp(56px, 15vw, 68px);
+    --dpad-size: clamp(98px, 25vw, 116px);
+  }
+  #gameWrapper { padding-bottom: 156px; }
+  #canvas { max-height: min(calc(42dvh + var(--play-extend)), calc(100dvh - 208px)); }
   #whisperArea { min-height: 30px; padding:4px 9px; }
   #controls {
     left:max(8px, env(safe-area-inset-left));
@@ -318,31 +323,23 @@ body {
     bottom:max(12px, env(safe-area-inset-bottom));
     width:calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 16px);
   }
-  .dpad {
-    width:var(--control-size);
-    height:var(--control-size);
-  }
 }
 
-/* 横向き時は左右の圧迫を避ける */
+/* 横向き（landscape）: 元サイズに戻して画面を確保 */
 @media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --control-size: clamp(56px, 15vw, 68px);
+    --dpad-size: clamp(98px, 25vw, 116px);
+  }
   #gameWrapper {
     width:min(760px, calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 24px));
-    padding-bottom:108px;
+    padding-bottom:140px;
   }
   #controls {
     left:max(12px, env(safe-area-inset-left));
     right:max(12px, env(safe-area-inset-right));
     width:calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 24px);
     bottom:max(12px, env(safe-area-inset-bottom));
-  }
-  .dpad {
-    width:var(--control-size);
-    height:var(--control-size);
-  }
-  .roundBtn {
-    width:var(--control-size);
-    height:var(--control-size);
   }
 }
 </style>
@@ -1161,8 +1158,10 @@ function spawnEnemy() {
 }
 
 // ============ メインループ ============
+const FRAME_MS = 1000 / 60;
 let lastTime = 0;
 function loop(ts) {
+  if (ts - lastTime < FRAME_MS) { requestAnimationFrame(loop); return; }
   const dt = Math.min(ts - lastTime, 50);
   lastTime = ts;
   if(state === 'play') update(dt);
@@ -2660,12 +2659,14 @@ document.addEventListener('touchmove', (e) => {
 let lastTap = 0;
 document.addEventListener('touchstart', (e) => {
   const now = Date.now();
-  if (now - lastTap < 300) e.preventDefault();
+  if (now - lastTap < 350) e.preventDefault(); // ダブルタップズーム防止（350ms）
   lastTap = now;
 }, { passive:false });
-
-document.addEventListener('dblclick', (e) => e.preventDefault(), { passive:false });
-document.addEventListener('contextmenu', (e) => e.preventDefault(), { passive:false });
+document.addEventListener('touchend', (e) => {
+  e.preventDefault(); // iOS Safari のダブルタップ遅延を完全にブロック
+}, { passive:false });
+document.addEventListener('dblclick', (e) => e.preventDefault());
+document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // ============ タイトル ============
 function showTitle() {
